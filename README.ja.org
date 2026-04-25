@@ -74,95 +74,9 @@ AI が必要とするどんな機能でも、Emacs を使うことで実現出�
 AI が Emacs という道具を持った時、どんな歴史が始まるのでしょうか。
 #+end_quote
 
-* なぜ作ったか
-
-Anvil は先人の仕事の上に立っています。
-
-MCP プロトコルの土台には Laurynas Biveinis 氏の [[https://github.com/laurynas-biveinis/mcp-server-lib.el][mcp-server-lib.el]] を使わせていただいています。
-org 系のプリミティブは同氏の [[https://github.com/laurynas-biveinis/org-mcp][org-mcp]] を拡張・統合して組み込みました。
-
-Anvil は、これら実績あるパッケージの上に、4 つのレイヤーを積み上げたものです:
-
-- ファイル操作 ── テキストファイルの読み書き、大きいファイルへの局所編集
-- 外部プロセス連携 ── shell コマンドや別言語 (Python など) の呼び出し
-- 時間のかかる処理の対応 ── OCR、PDF 変換、ファイル一括走査など
-- 上記を裏で引き受ける別 Emacs プロセス ── 走っている間も対話中の Emacs はフリーズしない
-
-   
-私は日本で 1 人電気管理事務所を営んでいます。
-工場設備の保安管理、担当事業場は約 40 か所。
-仕事の都合上 Windows で仕事をしていますが、長年の Emacs ユーザーでもあります。
-
-私の仕事ではお客様の都合上、頻繁に Microsoft Office を使用しています。
-おもに Excel を使って点検報告書を作成し、なにげないメモ作成、スケジュール管理には Emacs (org-mode) を使用しています。
-
-※ノートアプリは色々渡り歩いてきましたが、最終的に Emacs へと落ちつきました。
-
-
-この数ヶ月、私のワークフローは Claude を使いながら 3 つのフェーズを経て進化しました。
-
-** 第 1 フェーズ ── Claude Desktop (Claude Cowork)
-
-Anthropic のローカルファイル用エージェントであり、これによって私の仕事は劇的に効率化されました。
-Excel ファイルを編集出来ることやウェブブラウザを直接操作出来ることで、私の仕事の書類整理や報告書作成、会計処理などが効率化、さらには自動化する事が出来たのです。
-
-しかし、もっともっと効率化しようと、どんな事が出来るのか色々試していると、すぐに契約プラン (MAX プラン $200/月) の上限に達してしまう事に頭を抱えていました。
-
-** 第 2 フェーズ ── Claude Code (CLI)
-
-Claude Desktop アプリから Windows Terminal での Claude Code を使ったワークフローへと徐々に移行していきました。その体験は素晴しいものがありました。
-
-shell と git との統合がずっとやりやすくなり、仕事の自動化もどんどん進んでいきましたが、Excel ベースの報告書では限界を感じていました。
-※主に Claude との意思疎通についてです。点検報告書 (Excel ファイル) のどの位置をどのように編集するかといった内容です。
-
-ChatGPT をはじめ、Claude といった生成 AI が一番長けているのはテキストを使った作業です。
-
-ここで、点検報告書を私が使用している Emacs (org-mode) を使って org ファイル (テキストファイル) でデータを管理するようにしたいという欲が出てきました。
-※Excel ファイルはあくまで印刷用のフォーマットに特化。
-
-これであれば、生成 AI が一番得意なファイルフォーマットで協同作業が出来るようになる。
-そう考えどんどん org ファイルへの変換をしていきました。
-
-私自身は org ファイルへとした事でデータ編集が非常にやりやすくなりました。
-全てのお客様を 1 つの org ファイルで管理し、セクション毎に並びかえ。
-これは org-mode を使用した事のある方であれば、皆がイメージ出来る内容だと思います。
-
-しかし、Claude Code はどうでしょうか。
-大規模な org ファイルを Emacs 内で人間が編集するように上手に編集出来ないのです。
-それにトークン消費も増えたような気がしました。Claude Code は大きなファイル内容を毎回読込み、書き換えた内容を全て書き戻すという処理を行っているようです。
-
-しまいに Windows ではファイルマウントの問題から 1.2 MB 程の大きな org ファイルを編集すると、末尾の内容がどんどん消えていくではありませんか。
-
-
-せっかく Claude との協同作業の為に org ベースのワークフローへと移行したのに失敗だったのか。
-この便利な Emacs の機能を Claude が使えたら良いのに、、、、。
-
-もしかしたら、Emacs ならそれが出来るのでは？
-
-
-これが Anvil の開発の出発点でした。
-
-** 第 3 フェーズ ── Anvil 経由で Emacs の中へ
-
-そして第 3 フェーズ ── 自分で Anvil を組み上げ、Claude Code から呼べる MCP サーバーとして Emacs を立ち上げました。
-
-これでエージェントは、走っている Emacs イメージそのものと、型付きの MCP ツールを通じて対話するようになります。
-org の構造、見出し単位の編集、時間のかかる処理の振り分け ── すべてを Emacs 側の関数で処理した上で渡す。
-
-1.2 MB の org ファイルの末尾が消える問題は、もう起こりません。
-Emacs にとって大きな org ファイルは見慣れた相手で、行単位・見出し単位で正確に編集してくれます。
-
-直近数週間で、実際に効いた例をいくつか挙げてみます。
-
-- 1,200 行の =todo.org= 上の 29 個のサブタスクを、atomic な =file-batch= 1 コールで refile ── 1 秒未満。
-- =zawatton21= → =zawatton= のリネームを、7 リポジトリ 39 ファイルにまたがって、=emacs-eval= 上の elisp ループ 1 回で完了 ── 往復 1 回。
-- 点検報告書の OCR と PDF ラスタライズを =anvil-worker= にディスパッチ。スキャン中も対話中の Emacs はフリーズしません。
-
-
-私が抱えていた「大きな org が編集できない」「Excel での意思疎通に限界がある」「トークン消費が膨れる」── こうした問題は、おそらく Claude をはじめとした生成 AI を使っているあなたも、どこかで似たような形で抱えているはずです。
-
-人間が道具を作り、その道具で次を作る ── Anvil で Emacs を AI の最強ツールに鍛えていきましょう！！
-Emacs ならそれが可能です。
+#+begin_quote
+Anvil の背景 - 何故開発するに至ったのか — [[file:STORY.ja.org][STORY.ja.org]] ([[file:STORY.org][English]])。
+#+end_quote
 
 * Anvil とは？
 
@@ -171,7 +85,7 @@ Anvil は Emacs の機能を [[https://modelcontextprotocol.io/][Model Context P
 Claude Code、Claude Desktop、GPT、Ollama/llama.cpp 経由のローカルモデルなど、
 MCP を話すクライアントならどれでも対応しています。
 
-~(anvil-enable)~ の一行で、Emacs が 50 以上のツールを備えた AI 向け作業台に変わります。
+~(anvil-enable)~ の一行で、Emacs が 198 以上のツールを備えた AI 向け作業台に変わります。
 ファイル編集、org-mode 操作、git 参照、Elisp 評価など、すべて安全なサンドボックス
 インターフェース越しに利用できます。
 
@@ -254,11 +168,17 @@ iwr -useb https://raw.githubusercontent.com/zawatton/anvil.el/master/install.ps1
 
 * 機能ハイライト
 
-Anvil は約 50 個の MCP ツールを通じて、Emacs の機能を AI から直接呼べるようにします。
-特によく効く機能を 5 つだけ挙げると:
+Anvil は *198+ 個の MCP ツール* (v0.4.0 時点) を通じて、Emacs の機能を AI から直接呼べるようにします。
+主なハイライト:
 
 | 機能 | 何ができるか |
 |------|--------------|
+| =anvil-orchestrator= | 1 つのプロンプトを最大 5 つの AI CLI (=claude= / =aider= / =gemini= / =ollama= / =codex=) に並列 fan-out。Jaccard 合意 + meta-LLM judge + DAG 依存 + =anvil-cron= 連携で夜間 PDCA |
+| =anvil-memory= (v0.4.0) | Bayesian TTL + FTS5 全文検索 の auto-memory エンジン。MCP ツール 16 本 (memory-scan / -audit / -search / -duplicates / -promote 等)。=~/.claude/projects/*/memory/=、=~/.codex/memories/=、=~/.gemini/memories/=、Continue / Aider / Cline / Cursor を auto-detect し、インストール済の AI CLI の auto-memory を 1 つの SQLite DB で横断インデックス。陳腐化行検出・矛盾検出・URL 生存確認を全プロバイダ横断で実施 |
+| =anvil-tools-by-intent= + =anvil-manifest= (v0.4.0) | Intent-based tool discovery + =ANVIL_PROFILE= フィルタ。tool 毎に =:intent / :layer / :stability= tag、=agent= / =edit= / =ultra= profile で orchestrator 子セッションの =tools/list= を 3〜7 倍圧縮 (full ~20k → ultra ~2.7k tokens) |
+| =anvil-sexp= / =sexp-cst= / =py= / =ts= / =js= (v0.4.0) | 言語別構造編集。Elisp は reader ベース、Python / TypeScript / TSX / JavaScript は tree-sitter CST — ファイル全文に触らず AST 単位で refactor |
+| =anvil-session= + Claude Code lifecycle hooks (v0.4.0) | セッション snapshot / resume + 5 lifecycle hook (PreCompact / SessionStart / PostToolUse / UserPromptSubmit / SessionEnd)。branch + task summary を 14 日 TTL で保存、再起動時の cold 再構築を回避 |
+| =anvil-shell-filter= (v0.4.0) | shell 出力圧縮 — git / rg / pytest / ert-batch / docker-logs など 20 filter 同梱。raw は TTL 付きで stash、必要時に復元可 |
 | =file-batch= | 同じファイルへの複数編集を 1 往復で atomic に適用 (最大 ~90% トークン削減) |
 | =org-read-outline= / =org-read-headline= | 13,000 行の org でも、見出しだけ・1 サブツリーだけを読む。全文 read 不要 |
 | =anvil-worker= | 時間のかかる処理 (OCR、PDF 変換、ファイル一括走査など) を裏の別 Emacs に逃がす。対話中の Emacs はフリーズしない |
@@ -282,6 +202,34 @@ Anvil は約 50 個の MCP ツールを通じて、Emacs の機能を AI から�
 LLM エージェントはトークン課金です。Read/Edit のたびにバイトが飛び、
 オーケストレーションのオーバーヘッドが積み重なります。Anvil のツールは
 エージェントのコンテキスト予算を、書類整理ではなく推論に使えるよう設計されています。
+
+** Manifest プロファイル — セッション manifest コスト (v0.4.0)
+
+Doc 26 の =anvil-manifest= は、クライアントが virtual server-id
+(=emacs-eval-ultra= / =-nav= / =-core= / =-agent= / =-edit=) 経由で
+接続した際に =tools/list= をフィルタします。hidden tool も =tools/call=
+で明示呼出可能なのでハンドラ自体は live、セッション冒頭で Claude Code
+が読む manifest 前置きだけが縮みます:
+
+| プロファイル | 公開ツール数 | 概算トークン | 用途                               |
+|---------+--------------+--------------+------------------------------------|
+| =full=  | 198          | ~20,400       | 全機能                             |
+| =core=  | 54           | ~5,800        | 日常コーディング、memory エンジン off |
+| =lean=  | 59           | ~6,620        | memory エンジン off                |
+| =nav=   | 28           | ~3,100        | read-only 探索                     |
+| =ultra= | 17           | ~2,740        | hot tool + =ts_extended= lazy       |
+| =agent= (v0.4.0) | ≈60 (intent filter) | ~6,500 | orchestrator / session / memory / edit |
+| =edit=  (v0.4.0) | ≈40 (intent filter) | ~4,200 | ファイル / org / code / json 編集専用  |
+
+=manifest-cost= MCP ツールを叩けば現状の profile / advertised-count /
+registered-count / approx-tokens がいつでも取得できます。
+
+*Orchestrator 子セッション* (Doc 26 Phase 1b + Doc 34 Phase B) は
+=anvil-orchestrator-manifest-profile= を設定するだけで、自動生成された
+=--mcp-config= が =emacs-eval-PROFILE= 仮想 server に接続します。
+実測: 20 provider の合意を 200 子セッションで回すと =full= で
+manifest だけで約 4M tokens を消費するのに対し、=ultra= では約 550k ──
+*manifest 単独で ~87% 削減* (エージェントが一言発する前の段階で)。
 
 ** ファイル全体ではなく、領域に操作する
 
@@ -500,6 +448,29 @@ Anvil を使うと:
 | =browser=    | agent-browser 経由の Web fetch / interact / capture / screenshot（オプション） | agent-browser CLI |
 | =state=      | モジュール共通の永続 SQLite KV ストア（ns / TTL、オプション） | Emacs 29+        |
 | =http=       | =url-retrieve= 経由の GET/HEAD、ETag/TTL cache（オプション） | Emacs 29+（state 依存） |
+| =orchestrator= | AI CLI 並列ディスパッチャ (claude / aider / gemini / ollama / codex) — DAG、合意、meta-LLM judge、ライブストリーミング、cron + worktree 隔離（オプション） | AI CLIs、Emacs 29+ |
+| =orchestrator-routing= | provider 別レイテンシルーティング =orchestrator-routing-select= (v0.4.0) | =orchestrator= |
+| =orchestrator-presets= | 名前付き合意 provider 組合せ (v0.4.0) | =orchestrator= |
+| =pty-broker= | 実 TTY を要するプロセス向け node-pty TCP broker（オプション） | Node.js, node-pty |
+| =memory= (v0.4.0) | auto-memory index + TTL audit + アクセストラッカー。=~/.claude/projects/*/memory/*.md= 上で動作、MCP ツール 16 本 | Emacs 29+ |
+| =session= (v0.4.0) | セッション snapshot / resume + Claude Code lifecycle hook 5 本 | =state= |
+| =discovery= (v0.4.0) | Intent-based tool discovery (=anvil-tools-by-intent=) + tool 毎 usage counter | =state= |
+| =manifest= (v0.4.0) | =ANVIL_PROFILE= によるセッション別 =tools/list= フィルタ (ultra / nav / core / lean / full / agent / edit) | — |
+| =disclosure= (v0.4.0) | 3 層 read 契約 + citation URI scheme + =disclosure-help= | =org-index= |
+| =shell-filter= (v0.4.0) | shell 出力圧縮。20 filter 同梱 + tee + gain 統計 | =state= |
+| =data= (v0.4.0) | JSON path ベース編集 (preview-first): data-get-path / data-set-path / data-delete-path / data-list-keys | — |
+| =sexp= (v0.4.0) | reader ベース Elisp 構造編集: rename-symbol / replace-defun / wrap-form / macroexpand | — |
+| =sexp-cst= (v0.4.0) | tree-sitter-elisp CST + runtime =inspect-object= + =sexp-cst-read= / =-edit= / =-repair= | Emacs 29+, tree-sitter-elisp |
+| =defs= (v0.4.0) | SQLite バックの Elisp シンボルインデックス: defs-search / defs-references / defs-signature / defs-who-requires | Emacs 29+ |
+| =treesit= (v0.4.0) | 言語別構造モジュール共通の tree-sitter コア | Emacs 29+ |
+| =py= (v0.4.0) | Python 構造 locator + 編集 (treesit): py-list-* / py-find-definition / py-add-import 等 | =treesit=, tree-sitter-python |
+| =ts= (v0.4.0) | TypeScript / TSX 構造 locator (treesit) | =treesit=, tree-sitter-typescript |
+| =js= (v0.4.0) | JavaScript / JSX 構造 locator (treesit) | =treesit=, tree-sitter-javascript |
+| =bench= (v0.4.0) | bench-compare / bench-profile-expr / bench-last | — |
+| =bisect= (v0.4.0) | worktree 隔離 =emacs --batch= での test-driven git bisect | =worker= |
+| =git-msg= (v0.4.0) | git-commit-message（staged diff 基）+ git-pr-body（branch log 基） | =git= |
+| =lint= (v0.4.0) | リポジトリ衛生スキャナ (pluggable): conflict-markers / orphan-ids / broken-scheduled | — |
+| =uri= (v0.4.0) | URI ベースの =anvil-uri-fetch= クロスレイヤ resolver | =disclosure= |
 
 * クイックスタート
 
@@ -516,9 +487,9 @@ Anvil を使うと:
 インストール方法は 2 系統あります。特別な理由がなければ *安定版*
 を選んでください。
 
-** 安定版 (推奨) — タグ =v0.3.1=
+** 安定版 (推奨) — タグ =v0.4.1=
 
-=v0.3.1= は現在の安定版タグです。新機能や修正は =master= に随時
+=v0.4.1= は現在の安定版タグです。新機能や修正は =master= に随時
 取り込まれており、表面が落ち着いたタイミングで適宜タグを切ります。
 =master= を追う理由が無ければ、このタグに固定して使ってください。
 
@@ -529,7 +500,7 @@ Anvil を使うと:
 
 #+begin_src emacs-lisp
 (async-installer-git-add "https://github.com/zawatton/anvil.el.git"
-                            :tag "v0.3.1"
+                            :tag "v0.4.1"
                             :main "anvil.el")
 #+end_src
 
@@ -538,14 +509,14 @@ Anvil を使うと:
 #+begin_src emacs-lisp
 (straight-use-package
  '(anvil :type git :host github :repo "zawatton/anvil.el"
-         :branch "v0.3.1"))
+         :branch "v0.4.1"))
 #+end_src
 
 *** elpaca
 
 #+begin_src emacs-lisp
 (elpaca (anvil :host github :repo "zawatton/anvil.el"
-               :ref "v0.3.1"))
+               :ref "v0.4.1"))
 #+end_src
 
 *** use-package (straight または elpaca と組み合わせて)
@@ -554,11 +525,11 @@ Anvil を使うと:
 ;; straight 利用時
 (use-package anvil
   :straight (anvil :type git :host github :repo "zawatton/anvil.el"
-                   :branch "v0.3.1"))
+                   :branch "v0.4.1"))
 
 ;; elpaca 利用時
 (use-package anvil
-  :ensure (:host github :repo "zawatton/anvil.el" :ref "v0.3.1"))
+  :ensure (:host github :repo "zawatton/anvil.el" :ref "v0.4.1"))
 #+end_src
 
 ** 最新版 — =master= (強く非推奨)
@@ -609,7 +580,7 @@ user 向けです。
 (require 'anvil)
 #+end_src
 
-手動で clone する場合、安定版を使うなら =git checkout v0.3.1= で
+手動で clone する場合、安定版を使うなら =git checkout v0.4.1= で
 タグに切り替えてください。=master= のままは自己責任です。
 
 * 設定
@@ -647,6 +618,78 @@ agent-browser install   # 必要なら Chrome for Testing を取得
 Windows では agent-browser の Rust バイナリが Defender に誤検知され
 ることがあります。検知された場合は =%APPDATA%\npm\node_modules\agent-browser\bin\=
 を除外設定に追加してください。
+
+** Memory モジュール（オプション）— AI CLI 横断の auto-memory インデックス
+
+=memory= モジュールは disk 上の =.md= auto-memory ファイルを
+provider-agnostic に一括索引する opt-in モジュールです。Claude
+Code / Codex CLI / Gemini CLI / Continue / Aider / Cline /
+Cursor など、どの MCP クライアントからも同じ長期コンテキストを
+共有できます。
+
+有効化:
+
+#+begin_src emacs-lisp
+(add-to-list 'anvil-optional-modules 'memory)
+(anvil-enable)   ; モジュール群を再読み込み
+#+end_src
+
+disk 上の既存ファイルを一括インデックスする:
+
+#+begin_src text
+;; Emacs から:
+M-x anvil-memory-scan
+
+;; MCP クライアントから:
+`memory-scan' ツールを引数なしで呼ぶ
+#+end_src
+
+=memory-scan= は =anvil-memory-provider-paths= (下記既定) がマッチ
+する全ディレクトリを walk し、=.md= 1 ファイルにつき 1 行投入して
+FTS5 body 索引を更新します (=MEMORY.md= はスキップ)。冪等なので
+何度でも再実行可能 — 既存行の =access_count= / =validity_prior= は
+ON CONFLICT で保持されます。
+
+プロバイダ既定値 (追加・編集可能):
+
+#+begin_src emacs-lisp
+(setq anvil-memory-provider-paths
+      '((claude   . "~/.claude/projects/*/memory")
+        (codex    . "~/.codex/memories")
+        (gemini   . "~/.gemini/memories")
+        (continue . "~/.continue/memories")
+        (aider    . "~/.aider/memories")
+        (cline    . "~/.cline/memories")
+        (cursor   . "~/.cursor/memories")
+        (windsurf . "~/.windsurf/memories")
+        (zed      . "~/.config/zed/memories")))
+#+end_src
+
+パターンは =*= glob を含めて良く、存在しないパスは silently
+skip されます (未インストールの provider を追加してもコスト 0)。
+=anvil-memory-roots= を明示的に list にすると auto-detect を完全
+override できます (テスト / サンドボックス用途)。
+
+インデックス後は 1 つの SQLite DB
+(=~/.emacs.d/anvil-memory-index.db=) 上で全プロバイダ横断に通常
+tool が使えます:
+
+- =memory-search QUERY= — FTS5 全文検索 (=:limit= / =:type= 指定可)
+- =memory-audit= — TTL チェック。=:with_urls t= で
+  reference URL を =anvil-http-head= 生存確認
+- =memory-list= — =:with-decay t :sort 'decay= で decay スコア
+  降順
+- =memory-save-check SUBJECT BODY= — 書き込み前の Jaccard 類似
+  top-N 候補照合 (プロバイダ横断)
+- =memory-duplicates= — 横断ニア重複ペア検出
+- =memory-promote OLD NEW-TYPE= — rename + 索引更新
+- =memory-regenerate-index= — decay 降順で =MEMORY.md= body 生成
+  (read-only 出力、実際の write は呼び出し側の責任)
+
+Claude 以外の MCP クライアントは同じ anvil サーバに接続すれば
+これらの tool を呼べます。モジュールは =.md= 本文に書き込まない
+(ファイル操作は promote の rename のみ) ので、他ツールが管理する
+memory ディレクトリに向けても安全です。
 
 * クライアント設定 — AI を Anvil に接続する
 
@@ -927,7 +970,7 @@ claude-code-ide で Emacs 内インライン Claude セッション、anvil は
 単一 eval ツールを =:read-only= として登録できないので、読み取りを
 自動承認し書き込みだけ確認を要求、という分け方ができません。
 
-anvil は約 50 の named primitive を公開し、該当するものは =:read-only=
+anvil は約 198 の named primitive を公開し、該当するものは =:read-only=
 hint 付きで登録されています。Claude Code の =/permissions= と綺麗に噛み合い、
 ~org-read-outline~ / ~file-read~ / ~elisp-describe-function~ は自動承認、
 ~file-batch~ / ~org-edit-body~ / ~file-replace-string~ は確認要求、という
@@ -1042,4 +1085,5 @@ GPL-3.0。[[file:LICENSE][LICENSE]] を参照してください。
 * 謝辞
 
 - [[https://github.com/laurynas-biveinis/mcp-server-lib.el][mcp-server-lib.el]] by Laurynas Biveinis — MCP プロトコルの基盤
+- [[https://github.com/laurynas-biveinis/org-mcp][org-mcp]] by Laurynas Biveinis — =anvil-org= が拡張・統合した org プリミティブ
 - [[https://github.com/manzaltu/claude-code-ide.el][claude-code-ide.el]] by Manzaltu — IDE 統合のインスピレーション
